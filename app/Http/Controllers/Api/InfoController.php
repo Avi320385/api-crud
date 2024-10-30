@@ -28,46 +28,93 @@ class InfoController extends Controller
                            // 'password_confirm' => 'required|same:password',
                             'phone' => 'required|integer',
                             'adress' => 'required|string',
-                            'image' => 'mimes:jpeg,jpg,png,gif|required|max:10000',
+                            'image' => 'mimes:jpeg,jpg,png,gif,avif|required|max:10000',
                             'date_of_birth' => 'required|date',
 
                         ]);
-         if($validator->fails())
-         {
-            return response()->json([
-              'message'=>'all field are mandatory',
-              'error'=>$validator->messages(),
-            ],422);
-         }
-       Info::create([
-         'name'=> $request->name,
-        'email'=> $request->email,
-        'password'=> $request->password,
-        //'password_confirm'=> $request->password_confirm,
-        'phone'=> $request->phone,
-        'adress'=> $request->adress,
-        'date_of_birth'=> $request->date_of_birth,
+                        $info = Info::create([
+                            'name' => $request->name,
+                            'email' => $request->email,
+                            'password' => bcrypt($request->password),
+                            'phone' => $request->phone,
+                            'adress' => $request->adress,
+                            'date_of_birth' => $request->date_of_birth,
+                            // Save image field empty for now; it will be updated shortly
+                            'image' => '',
+                        ]);
 
-        'image'=>  $request->file('image'),
+                        // Generate the image directory based on the database record's name or id
+                        $image = $request->file('image');
+                        $originalName = $image->getClientOriginalName();
+                        $imageDirectory = public_path($info->email);
+                        $imageName = '/public' .'/'. $info->email.'/'.$originalName;
 
-       ]);
-       $image = $request->file('image');
+                        // Create the directory if it doesn't exist
+                        if (!file_exists($imageDirectory)) {
+                            mkdir($imageDirectory, 0777, true);
+                        }
 
-       // Create a unique name for the image
-       $imageName = time() . '.' . $image->getClientOriginalExtension();
+                        // Move the image to the created directory
+                        $image->move($imageDirectory, $imageName);
 
-       // Create the directory path based on user's email
-       $directory = public_path($request->email);
+                        // Update the record with the image path
+                        $info->update([
+                            'image' => $imageName,
+                        ]);
 
-       // Create the directory if it does not exist
-       if (!file_exists($directory)) {
-           mkdir($directory, 0777, true);
-       }
+                        return new InfoResource($info);
 
-       // Move the image to the user's email folder
-       $image->move($directory, $imageName);
+                        // return response()->json(
+                        //     [
+                        //         'id'=>$request->id,
+                        //         'name'=>$request->name,
+                        //         'email'=>$request->email,
+                        //         'password'=>$request->password,
+                        //         'phone'=>$request->phone,
+                        //         'adress'=>$request->adress,
+                        //         'date_of_birth'=>$request->date_of_birth,
+                        //         'image'=>$request->image,
 
-       return response()->json(['success' => ' yes yes i can do it']);
+                        //     ],);
+    //      if($validator->fails())
+    //      {
+    //         return response()->json([
+    //           'message'=>'all field are mandatory',
+    //           'error'=>$validator->messages(),
+    //         ],422);
+    //      }
+
+
+    //    // Create a unique name for the image
+
+
+    //    // Create the directory path based on user's email
+    //    $image = $request->file('image');
+    //    //$originalName = $image->getClientOriginalName();
+    //    $directory = public_path($request->email);
+    //    $imageName = $request->email . '_' . time() ;
+
+    //    // Create the directory if it does not exist
+    //    if (!file_exists($directory)) {
+    //        mkdir($directory, 0777, true);
+    //    }
+
+    //    // Move the image to the user's email folder
+    //    $image->move($imageName);
+    //    Info::create([
+    //     'name'=> $request->name,
+    //    'email'=> $request->email,
+    //    'password'=> $request->password,
+    //    //'password_confirm'=> $request->password_confirm,
+    //    'phone'=> $request->phone,
+    //    'adress'=> $request->adress,
+    //    'date_of_birth'=> $request->date_of_birth,
+
+    //    'image'=>  $request->file('image'),
+
+    //   ]);
+
+    //    return response()->json(['success' => ' yes yes i can do it'],200);
 
       // $imageName = time().'.'.request()->image->getClientOriginalExtension();
        //$path = "public/".$request->email."imageName";
@@ -80,3 +127,7 @@ class InfoController extends Controller
     //    ],200);
     }
 }
+//public/try@il.com_1730311026_front-view-man-eating-apple_23-2149857625.avif
+//public/try@il.com_front-view-man-eating-apple_23-2149857625.avif
+//public/try@il.com
+
